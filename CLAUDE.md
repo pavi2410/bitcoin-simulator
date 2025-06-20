@@ -29,13 +29,20 @@ This is a Bitcoin blockchain simulator built with React, TypeScript, and Vite. T
 
 ### State Management
 
-The application uses a custom `useLocalStorage` hook for persistence, though localStorage functionality is disabled for Claude.ai compatibility. All state is managed through React hooks:
+The application uses **nanostores** with persistent storage for robust state management:
 
-- `blockchain` - Array of mined blocks
-- `mempool` - Pending transactions
-- `wallets` - Wallet addresses and balances  
-- `validators` - Mining nodes with statistics
-- `txCounter` - Transaction ID counter
+- **state.ts** - Centralized state management using nanostores
+- **@nanostores/persistent** - Automatic localStorage persistence
+- **@nanostores/react** - React integration with useStore hooks
+
+**Key Stores:**
+- `$blockchain` - Array of mined blocks (persistent)
+- `$mempool` - Pending transactions (persistent)
+- `$wallets` - Wallet addresses and balances (persistent)
+- `$validators` - Mining nodes with statistics (persistent)
+- `$txCounter` - Transaction ID counter (persistent)
+- `$selectedWallet`, `$selectedTab` - UI state (persistent)
+- `$mining`, `$currentBlock`, `$autoMining` - Mining state (non-persistent)
 
 ### UI Structure
 
