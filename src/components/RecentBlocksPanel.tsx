@@ -11,7 +11,7 @@ const RecentBlocksPanel = () => {
         <Blocks className="text-blue-400" size={20} />
         Recent Blocks
       </h2>
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-2 overflow-y-auto">
         {blockchain.slice(-5).reverse().map((block: Block) => (
           <div key={block.height} className="bg-gray-700 p-3 rounded-lg">
             <div className="flex justify-between items-center mb-2">

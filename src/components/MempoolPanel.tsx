@@ -11,7 +11,7 @@ const MempoolPanel = () => {
         <Hash className="text-yellow-400" size={20} />
         Mempool ({mempool.length})
       </h2>
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="space-y-2 overflow-y-auto">
         {mempool.map((tx: Transaction) => (
           <div key={tx.id} className="bg-gray-700 p-3 rounded-lg">
             <div className="flex justify-between items-center mb-2">
