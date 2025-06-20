@@ -98,8 +98,10 @@ export const $currentBlock = atom<Block | null>(null);
 export const $autoMining = atom<boolean>(false);
 
 // Helper functions
-export const generateHash = (_data: string): string => {
-  return '0x' + Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+export const generateHash = (data: string): string => {
+  // Simple hash simulation based on data + random elements
+  const hashSeed = data.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return '0x' + hashSeed.toString(36) + Math.random().toString(36).substring(2, 8);
 };
 
 export const generateFakeTransaction = (): Transaction => {

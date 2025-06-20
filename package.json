@@ -10,13 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@base-ui-components/react": "^1.0.0-beta.0",
     "@nanostores/persistent": "^1.0.0",
     "@nanostores/react": "^1.0.0",
     "@tailwindcss/vite": "^4.1.10",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.518.0",
     "nanostores": "^1.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
