@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useStore } from '@nanostores/react';
-import { Wallet, Blocks, Globe, Users } from 'lucide-react';
+import { Wallet, Blocks, Globe, Users, BarChart3 } from 'lucide-react';
 import { Tabs, TabPanel } from './components/Tabs';
 import { Header } from './components/Header';
 import { MempoolPanel } from './components/MempoolPanel';
@@ -9,6 +9,7 @@ import { RecentBlocksPanel } from './components/RecentBlocksPanel';
 import { WalletPanel } from './components/WalletPanel';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { NodesPanel } from './components/NodesPanel';
+import { ChainInfoPanel } from './components/ChainInfoPanel';
 import {
   $selectedTab,
   $autoMining,
@@ -64,6 +65,7 @@ const BitcoinSimulator = () => {
     { value: 'wallet', label: 'Wallet', icon: Wallet },
     { value: 'explorer', label: 'Explorer', icon: Blocks },
     { value: 'nodes', label: 'Nodes', icon: Users },
+    { value: 'chain-info', label: 'Chain Info', icon: BarChart3 },
   ];
 
   return (
@@ -94,6 +96,10 @@ const BitcoinSimulator = () => {
 
           <TabPanel value="nodes">
             <NodesPanel />
+          </TabPanel>
+
+          <TabPanel value="chain-info">
+            <ChainInfoPanel />
           </TabPanel>
         </Tabs>
       </div>

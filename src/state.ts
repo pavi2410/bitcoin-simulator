@@ -39,7 +39,7 @@ export interface Validator {
   blocks: number;
 }
 
-export type TabId = 'overview' | 'wallet' | 'explorer' | 'nodes';
+export type TabId = 'overview' | 'wallet' | 'explorer' | 'nodes' | 'chain-info';
 
 // Initial data
 const initialWallets: Wallets = {
