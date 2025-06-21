@@ -1,6 +1,8 @@
 import { useStore } from '@nanostores/react';
-import { Blocks } from 'lucide-react';
+import { Blocks, ChevronDown } from 'lucide-react';
+import { Accordion } from '@base-ui-components/react/accordion';
 import { $blockchain, type Block, type Transaction } from '../state';
+import { TransactionDetails } from './TransactionDetails';
 
 const ExplorerPanel = () => {
   const blockchain = useStore($blockchain);
@@ -48,32 +50,42 @@ const ExplorerPanel = () => {
             {block.transactions.length > 0 && (
               <div>
                 <div className="text-sm text-gray-400 mb-2">Transactions</div>
-                <div className="space-y-2">
+                <Accordion.Root className="space-y-2" openMultiple={false}>
                   {block.transactions.map((tx: Transaction) => {
                     const totalOutputAmount = tx.outputs.reduce((acc, output) => acc + output.amount, 0);
                     const fromAddress = tx.inputs.length > 0 ? `${tx.inputs.length} inputs` : 'Coinbase';
                     const toAddress = tx.outputs.length > 0 ? tx.outputs[0].address : 'Unknown';
                     
                     return (
-                      <div key={tx.id} className="bg-gray-600 p-3 rounded">
-                        <div className="flex justify-between items-center">
-                          <div className="text-sm">
-                            <div>From: {fromAddress}</div>
-                            <div>To: {toAddress.slice(0, 30)}...</div>
-                            <div>Type: {tx.type}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-green-400 font-bold">{totalOutputAmount.toFixed(8)} BTC</div>
-                            <div className="text-xs text-gray-400">Fee: {tx.fee} BTC</div>
-                            {tx.outputs.length > 1 && (
-                              <div className="text-xs text-blue-400">{tx.outputs.length} outputs</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <Accordion.Item key={tx.id} value={tx.id}>
+                        <Accordion.Header>
+                          <Accordion.Trigger className="w-full bg-gray-600 p-3 rounded hover:bg-gray-500 transition-colors group">
+                            <div className="flex justify-between items-center">
+                              <div className="text-sm text-left">
+                                <div>From: {fromAddress}</div>
+                                <div>To: {toAddress.slice(0, 30)}...</div>
+                                <div>Type: {tx.type}</div>
+                              </div>
+                              <div className="text-right flex items-center gap-3">
+                                <div>
+                                  <div className="text-green-400 font-bold">{totalOutputAmount.toFixed(8)} BTC</div>
+                                  <div className="text-xs text-gray-400">Fee: {tx.fee} BTC</div>
+                                  {tx.outputs.length > 1 && (
+                                    <div className="text-xs text-blue-400">{tx.outputs.length} outputs</div>
+                                  )}
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-gray-400 group-data-[state=open]:rotate-180 transition-transform" />
+                              </div>
+                            </div>
+                          </Accordion.Trigger>
+                        </Accordion.Header>
+                        <Accordion.Panel className="overflow-hidden">
+                          <TransactionDetails transaction={tx} />
+                        </Accordion.Panel>
+                      </Accordion.Item>
                     );
                   })}
-                </div>
+                </Accordion.Root>
               </div>
             )}
           </div>
