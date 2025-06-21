@@ -68,7 +68,25 @@ export interface Validator {
   lastHashRate?: number;
 }
 
-export type TabId = 'overview' | 'wallet' | 'explorer' | 'nodes' | 'chain-info';
+export type TabId = 'overview' | 'wallet' | 'explorer' | 'nodes' | 'chain-info' | 'analytics';
+
+// Analytics data types
+export interface NetworkDataPoint {
+  timestamp: number;
+  blockHeight: number;
+  difficulty: number;
+  hashRate: number;
+  blockTime: number;
+  mempoolSize: number;
+  totalTransactions: number;
+  averageFee: number;
+}
+
+export interface ChartDataPoint {
+  timestamp: number;
+  value: number;
+  label: string;
+}
 
 // Initial data
 const initialWallets: Wallets = {
@@ -128,6 +146,12 @@ export const $wallets = persistentAtom<Wallets>('bitcoin-wallets', initialWallet
 });
 
 export const $utxos = persistentAtom<UTXO[]>('bitcoin-utxos', initialUTXOs, {
+  encode: JSON.stringify,
+  decode: JSON.parse,
+});
+
+// Analytics data stores
+export const $networkHistory = persistentAtom<NetworkDataPoint[]>('bitcoin-network-history', [], {
   encode: JSON.stringify,
   decode: JSON.parse,
 });
@@ -213,6 +237,50 @@ export const createCoinbaseTransaction = (minerAddress: string, blockHeight: num
     hash: txId,
     type: 'coinbase'
   };
+};
+
+// Analytics helper functions
+export const collectNetworkData = (): void => {
+  const blockchain = $blockchain.get();
+  const mempool = $mempool.get();
+  const currentDifficulty = $currentDifficulty.get();
+  const networkHashRate = $networkHashRate.get();
+  const networkHistory = $networkHistory.get();
+  
+  if (blockchain.length === 0) return;
+  
+  const latestBlock = blockchain[blockchain.length - 1];
+  
+  // Calculate block time (time since previous block)
+  let blockTime = 600000; // Default 10 minutes in ms
+  if (blockchain.length > 1) {
+    const previousBlock = blockchain[blockchain.length - 2];
+    blockTime = latestBlock.timestamp - previousBlock.timestamp;
+  }
+  
+  // Calculate total transactions
+  const totalTransactions = blockchain.reduce((acc, block) => acc + block.transactions.length, 0);
+  
+  // Calculate average fee
+  const totalFees = blockchain.reduce((acc, block) => 
+    acc + block.transactions.reduce((txAcc, tx) => txAcc + tx.fee, 0), 0
+  );
+  const averageFee = totalTransactions > 0 ? totalFees / totalTransactions : 0;
+  
+  const dataPoint: NetworkDataPoint = {
+    timestamp: latestBlock.timestamp,
+    blockHeight: latestBlock.height,
+    difficulty: currentDifficulty,
+    hashRate: networkHashRate,
+    blockTime: blockTime / 1000, // Convert to seconds
+    mempoolSize: mempool.length,
+    totalTransactions,
+    averageFee
+  };
+  
+  // Keep only last 50 data points to prevent memory issues
+  const updatedHistory = [...networkHistory, dataPoint].slice(-50);
+  $networkHistory.set(updatedHistory);
 };
 
 export const generateFakeTransaction = (): Transaction => {
@@ -479,6 +547,9 @@ export const mineBlock = async (): Promise<void> => {
     $validators.set(validators.map(v => 
       v.id === miner.id ? { ...v, blocks: v.blocks + 1, lastHashRate: hashRate } : v
     ));
+
+    // Collect analytics data
+    collectNetworkData();
 
   } catch (error) {
     console.error('Mining failed:', error);
