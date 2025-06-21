@@ -5,6 +5,7 @@ import { Select } from './Select';
 import { Input } from './Input';
 import {
   $wallets,
+  $walletBalances,
   $selectedWallet,
   $transferAmount,
   $transferTo,
@@ -14,6 +15,7 @@ import {
 
 const WalletPanel = () => {
   const wallets = useStore($wallets);
+  const walletBalances = useStore($walletBalances);
   const selectedWallet = useStore($selectedWallet);
   const transferAmount = useStore($transferAmount);
   const transferTo = useStore($transferTo);
@@ -44,7 +46,7 @@ const WalletPanel = () => {
                     <div className="text-sm text-gray-400">{wallet.address.slice(0, 30)}...</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-green-400">{wallet.balance} BTC</div>
+                    <div className="text-lg font-bold text-green-400">{walletBalances[key as WalletId]?.toFixed(8) || '0.00000000'} BTC</div>
                   </div>
                 </div>
               </div>
@@ -60,7 +62,7 @@ const WalletPanel = () => {
               <label className="block text-sm font-medium mb-2">From Wallet</label>
               <div className="bg-gray-700 p-3 rounded-lg">
                 <div className="font-semibold">{selectedWallet.toUpperCase()}</div>
-                <div className="text-sm text-gray-400">Balance: {wallets[selectedWallet].balance} BTC</div>
+                <div className="text-sm text-gray-400">Balance: {walletBalances[selectedWallet]?.toFixed(8) || '0.00000000'} BTC</div>
               </div>
             </div>
             

@@ -49,20 +49,30 @@ const ExplorerPanel = () => {
               <div>
                 <div className="text-sm text-gray-400 mb-2">Transactions</div>
                 <div className="space-y-2">
-                  {block.transactions.map((tx: Transaction) => (
-                    <div key={tx.id} className="bg-gray-600 p-3 rounded">
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm">
-                          <div>From: {tx.from.slice(0, 30)}...</div>
-                          <div>To: {tx.to.slice(0, 30)}...</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-green-400 font-bold">{tx.amount} BTC</div>
-                          <div className="text-xs text-gray-400">Fee: {tx.fee} BTC</div>
+                  {block.transactions.map((tx: Transaction) => {
+                    const totalOutputAmount = tx.outputs.reduce((acc, output) => acc + output.amount, 0);
+                    const fromAddress = tx.inputs.length > 0 ? `${tx.inputs.length} inputs` : 'Coinbase';
+                    const toAddress = tx.outputs.length > 0 ? tx.outputs[0].address : 'Unknown';
+                    
+                    return (
+                      <div key={tx.id} className="bg-gray-600 p-3 rounded">
+                        <div className="flex justify-between items-center">
+                          <div className="text-sm">
+                            <div>From: {fromAddress}</div>
+                            <div>To: {toAddress.slice(0, 30)}...</div>
+                            <div>Type: {tx.type}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-green-400 font-bold">{totalOutputAmount.toFixed(8)} BTC</div>
+                            <div className="text-xs text-gray-400">Fee: {tx.fee} BTC</div>
+                            {tx.outputs.length > 1 && (
+                              <div className="text-xs text-blue-400">{tx.outputs.length} outputs</div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
