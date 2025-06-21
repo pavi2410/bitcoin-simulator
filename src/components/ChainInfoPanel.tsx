@@ -1,44 +1,32 @@
 import { useStore } from '@nanostores/react';
 import { Activity, Hash, Clock, Coins, TrendingUp, Database } from 'lucide-react';
-import { $blockchain, $mempool, $wallets, $validators } from '../state';
+import { 
+  $totalBlocks,
+  $totalTransactions,
+  $totalSupply,
+  $avgBlockTime,
+  $networkHashrate,
+  $avgTxFee,
+  $latestBlock,
+  $timeSinceLastBlock,
+  $mempoolStats,
+  $validators
+} from '../state';
 import { StatCard } from './StatCard';
 import { formatNumber, formatTime } from '../utils';
 
 export const ChainInfoPanel = () => {
-  const blockchain = useStore($blockchain);
-  const mempool = useStore($mempool);
-  const wallets = useStore($wallets);
+  // Use computed stores for derived statistics
+  const totalBlocks = useStore($totalBlocks);
+  const totalTransactions = useStore($totalTransactions);
+  const totalSupply = useStore($totalSupply);
+  const avgBlockTime = useStore($avgBlockTime);
+  const networkHashrate = useStore($networkHashrate);
+  const avgTxFee = useStore($avgTxFee);
+  const latestBlock = useStore($latestBlock);
+  const timeSinceLastBlock = useStore($timeSinceLastBlock);
+  const mempoolStats = useStore($mempoolStats);
   const validators = useStore($validators);
-
-  // Calculate statistics
-  const totalBlocks = blockchain.length;
-  const totalTransactions = blockchain.reduce((acc, block) => acc + block.transactions.length, 0);
-  const mempoolSize = mempool.length;
-  
-  // Calculate total supply (initial supply + mining rewards)
-  const initialSupply = Object.values(wallets).reduce((acc, wallet) => acc + wallet.balance, 0);
-  const miningRewards = totalBlocks * 6.25; // Simulate block reward
-  const totalSupply = initialSupply + miningRewards;
-  
-  // Calculate average block time
-  const avgBlockTime = blockchain.length > 1 
-    ? (blockchain[blockchain.length - 1].timestamp - blockchain[0].timestamp) / (blockchain.length - 1) / 1000
-    : 0;
-  
-  // Calculate network hashrate (simulated)
-  const networkHashrate = validators.filter(v => v.status === 'active').length * 1000000; // TH/s
-  
-  // Calculate average transaction fee
-  const totalFees = blockchain.reduce((acc, block) => 
-    acc + block.transactions.reduce((txAcc, tx) => txAcc + tx.fee, 0), 0
-  );
-  const avgTxFee = totalTransactions > 0 ? totalFees / totalTransactions : 0;
-
-  // Latest block info
-  const latestBlock = blockchain[blockchain.length - 1];
-  const timeSinceLastBlock = latestBlock 
-    ? Math.floor((Date.now() - latestBlock.timestamp) / 1000)
-    : 0;
 
   return (
     <div className="col-span-12 space-y-4 p-4">
@@ -69,7 +57,7 @@ export const ChainInfoPanel = () => {
           icon={Coins}
           title="Total Supply"
           value={`${formatNumber(totalSupply)} BTC`}
-          subtitle={`${miningRewards} BTC mined`}
+          subtitle={`${totalBlocks * 6.25} BTC mined`}
           color="orange"
         />
         <StatCard
@@ -150,18 +138,18 @@ export const ChainInfoPanel = () => {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">{mempoolSize}</div>
+            <div className="text-2xl font-bold text-white">{mempoolStats.size}</div>
             <div className="text-sm text-gray-400">Pending Transactions</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-white">
-              {mempoolSize > 0 ? formatNumber(mempool.reduce((acc, tx) => acc + tx.amount, 0)) : '0'}
+              {formatNumber(mempoolStats.totalValue)}
             </div>
             <div className="text-sm text-gray-400">Total Value (BTC)</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-white">
-              {mempoolSize > 0 ? (mempool.reduce((acc, tx) => acc + tx.fee, 0) / mempoolSize).toFixed(4) : '0.0000'}
+              {mempoolStats.avgFee.toFixed(4)}
             </div>
             <div className="text-sm text-gray-400">Avg Fee (BTC)</div>
           </div>

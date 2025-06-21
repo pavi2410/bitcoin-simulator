@@ -1,4 +1,4 @@
-import { atom } from 'nanostores';
+import { atom, computed } from 'nanostores';
 import { persistentAtom } from '@nanostores/persistent';
 
 // Type definitions
@@ -223,3 +223,51 @@ export const resetNetwork = (): void => {
   $selectedTab.set('overview');
   $autoMining.set(false);
 };
+
+// Computed stores for derived statistics
+export const $totalBlocks = computed($blockchain, (blockchain) => blockchain.length);
+
+export const $totalTransactions = computed($blockchain, (blockchain) =>
+  blockchain.reduce((acc, block) => acc + block.transactions.length, 0)
+);
+
+export const $mempoolSize = computed($mempool, (mempool) => mempool.length);
+
+export const $totalSupply = computed([$wallets, $blockchain], (wallets, blockchain) => {
+  const initialSupply = Object.values(wallets).reduce((acc, wallet) => acc + wallet.balance, 0);
+  const miningRewards = blockchain.length * 6.25;
+  return initialSupply + miningRewards;
+});
+
+export const $avgBlockTime = computed($blockchain, (blockchain) => {
+  if (blockchain.length <= 1) return 0;
+  const firstBlock = blockchain[0];
+  const lastBlock = blockchain[blockchain.length - 1];
+  return (lastBlock.timestamp - firstBlock.timestamp) / (blockchain.length - 1) / 1000;
+});
+
+export const $networkHashrate = computed($validators, (validators) =>
+  validators.filter(v => v.status === 'active').length * 1000000
+);
+
+export const $avgTxFee = computed($blockchain, (blockchain) => {
+  const totalFees = blockchain.reduce((acc, block) => 
+    acc + block.transactions.reduce((txAcc, tx) => txAcc + tx.fee, 0), 0
+  );
+  const totalTransactions = blockchain.reduce((acc, block) => acc + block.transactions.length, 0);
+  return totalTransactions > 0 ? totalFees / totalTransactions : 0;
+});
+
+export const $latestBlock = computed($blockchain, (blockchain) =>
+  blockchain.length > 0 ? blockchain[blockchain.length - 1] : null
+);
+
+export const $timeSinceLastBlock = computed($latestBlock, (latestBlock) =>
+  latestBlock ? Math.floor((Date.now() - latestBlock.timestamp) / 1000) : 0
+);
+
+export const $mempoolStats = computed($mempool, (mempool) => ({
+  size: mempool.length,
+  totalValue: mempool.reduce((acc, tx) => acc + tx.amount, 0),
+  avgFee: mempool.length > 0 ? mempool.reduce((acc, tx) => acc + tx.fee, 0) / mempool.length : 0
+}));
