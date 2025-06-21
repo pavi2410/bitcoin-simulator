@@ -42,8 +42,12 @@ export interface Block {
   transactions: Transaction[];
   miner: string;
   nonce: number;
-  difficulty: string;
+  difficulty: number;
+  target: string;
   reward: number;
+  hashRate?: number;
+  miningTime?: number;
+  attempts?: number;
 }
 
 export interface WalletData {
@@ -60,6 +64,8 @@ export interface Validator {
   name: string;
   status: 'active' | 'inactive';
   blocks: number;
+  hashRate: number;
+  lastHashRate?: number;
 }
 
 export type TabId = 'overview' | 'wallet' | 'explorer' | 'nodes' | 'chain-info';
@@ -100,9 +106,9 @@ const initialUTXOs: UTXO[] = [
 ];
 
 const initialValidators: Validator[] = [
-  { id: 1, name: 'Node Alpha', status: 'active', blocks: 0 },
-  { id: 2, name: 'Node Beta', status: 'active', blocks: 0 },
-  { id: 3, name: 'Node Gamma', status: 'active', blocks: 0 }
+  { id: 1, name: 'Node Alpha', status: 'active', blocks: 0, hashRate: 1000000 },
+  { id: 2, name: 'Node Beta', status: 'active', blocks: 0, hashRate: 800000 },
+  { id: 3, name: 'Node Gamma', status: 'active', blocks: 0, hashRate: 1200000 }
 ];
 
 // Persistent stores (will be saved to localStorage)
@@ -152,6 +158,12 @@ export const $transferTo = atom<WalletId>('wallet2');
 export const $mining = atom<boolean>(false);
 export const $currentBlock = atom<Block | null>(null);
 export const $autoMining = atom<boolean>(false);
+
+// PoW Mining state
+export const $miningProgress = atom<number>(0);
+export const $miningAttempts = atom<number>(0);
+export const $currentDifficulty = atom<number>(4);
+export const $networkHashRate = atom<number>(0);
 
 // UTXO Helper functions
 export const generateHash = (data: string): string => {
@@ -333,6 +345,14 @@ export const mineBlock = async (): Promise<void> => {
   if (mempool.length === 0 || mining) return;
   
   $mining.set(true);
+  $miningProgress.set(0);
+  $miningAttempts.set(0);
+  
+  // Calculate current difficulty
+  const { calculateDifficultyAdjustment, mineBlock: powMineBlock, calculateTarget, calculateHashRate } = await import('./pow');
+  const currentDifficulty = calculateDifficultyAdjustment(blockchain);
+  $currentDifficulty.set(currentDifficulty);
+  
   const miner = validators[Math.floor(Math.random() * validators.length)];
   const blockHeight = blockchain.length + 1;
   const blockReward = 6.25; // Bitcoin block reward
@@ -350,46 +370,98 @@ export const mineBlock = async (): Promise<void> => {
   // Update coinbase transaction to include fees
   coinbaseTx.outputs[0].amount = blockReward + totalFees;
   
-  // Simulate mining process
-  const blockData: Block = {
+  // Prepare block data for mining
+  const previousHash = blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : '0x0000000000000000';
+  const target = calculateTarget(currentDifficulty);
+  const miningStartTime = Date.now();
+  
+  // Create block template
+  const blockTemplate = {
     height: blockHeight,
-    hash: generateHash(`block-${blockHeight}`),
-    previousHash: blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : '0x0000000000000000',
-    timestamp: Date.now(),
+    previousHash,
+    timestamp: miningStartTime,
     transactions: allTransactions,
     miner: miner.name,
-    nonce: Math.floor(Math.random() * 1000000),
-    difficulty: '0000',
+    difficulty: currentDifficulty,
+    target,
     reward: blockReward + totalFees
   };
-
-  $currentBlock.set(blockData);
-
-  // Simulate mining delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  // Process UTXOs - spend inputs and create new outputs
-  const updatedUTXOs = [...utxos];
   
-  regularTxs.forEach((tx: Transaction) => {
-    // Mark input UTXOs as spent
-    tx.inputs.forEach(input => {
-      const utxoIndex = updatedUTXOs.findIndex(
-        utxo => utxo.txId === input.txId && utxo.outputIndex === input.outputIndex && !utxo.spent
-      );
-      if (utxoIndex !== -1) {
-        updatedUTXOs[utxoIndex] = {
-          ...updatedUTXOs[utxoIndex],
-          spent: true,
-          spentInTx: tx.id
-        };
+  $currentBlock.set(blockTemplate as Block);
+  
+  // Create block data string for mining
+  const blockDataString = JSON.stringify({
+    height: blockHeight,
+    previousHash,
+    timestamp: miningStartTime,
+    transactions: allTransactions.map(tx => tx.hash),
+    miner: miner.name
+  });
+  
+  try {
+    // Perform actual Proof of Work mining
+    const miningResult = await powMineBlock(
+      blockDataString,
+      currentDifficulty,
+      100000, // max attempts
+      (attempts) => {
+        $miningAttempts.set(attempts);
+        $miningProgress.set(Math.min(attempts / 50000, 1)); // Progress bar
       }
+    );
+    
+    const miningTime = Date.now() - miningStartTime;
+    const hashRate = calculateHashRate(currentDifficulty, miningTime);
+    
+    // Create final block with PoW results
+    const blockData: Block = {
+      ...blockTemplate,
+      hash: miningResult.hash,
+      nonce: miningResult.nonce,
+      hashRate,
+      miningTime,
+      attempts: miningResult.attempts
+    };
+    
+    // Update network hash rate
+    const totalHashRate = validators.reduce((acc, v) => acc + v.hashRate, 0);
+    $networkHashRate.set(totalHashRate);
+
+    // Process UTXOs - spend inputs and create new outputs
+    const updatedUTXOs = [...utxos];
+    
+    regularTxs.forEach((tx: Transaction) => {
+      // Mark input UTXOs as spent
+      tx.inputs.forEach(input => {
+        const utxoIndex = updatedUTXOs.findIndex(
+          utxo => utxo.txId === input.txId && utxo.outputIndex === input.outputIndex && !utxo.spent
+        );
+        if (utxoIndex !== -1) {
+          updatedUTXOs[utxoIndex] = {
+            ...updatedUTXOs[utxoIndex],
+            spent: true,
+            spentInTx: tx.id
+          };
+        }
+      });
+      
+      // Create new UTXOs from outputs
+      tx.outputs.forEach(output => {
+        updatedUTXOs.push({
+          txId: tx.id,
+          outputIndex: output.index,
+          address: output.address,
+          amount: output.amount,
+          spent: false,
+          blockHeight: blockHeight
+        });
+      });
     });
     
-    // Create new UTXOs from outputs
-    tx.outputs.forEach(output => {
+    // Create UTXO for coinbase transaction
+    coinbaseTx.outputs.forEach(output => {
       updatedUTXOs.push({
-        txId: tx.id,
+        txId: coinbaseTx.id,
         outputIndex: output.index,
         address: output.address,
         amount: output.amount,
@@ -397,32 +469,25 @@ export const mineBlock = async (): Promise<void> => {
         blockHeight: blockHeight
       });
     });
-  });
-  
-  // Create UTXO for coinbase transaction
-  coinbaseTx.outputs.forEach(output => {
-    updatedUTXOs.push({
-      txId: coinbaseTx.id,
-      outputIndex: output.index,
-      address: output.address,
-      amount: output.amount,
-      spent: false,
-      blockHeight: blockHeight
-    });
-  });
 
-  // Update stores
-  $utxos.set(updatedUTXOs);
-  $blockchain.set([...blockchain, blockData]);
-  $mempool.set(mempool.slice(regularTxs.length));
-  
-  // Update validator stats
-  $validators.set(validators.map(v => 
-    v.id === miner.id ? { ...v, blocks: v.blocks + 1 } : v
-  ));
+    // Update stores
+    $utxos.set(updatedUTXOs);
+    $blockchain.set([...blockchain, blockData]);
+    $mempool.set(mempool.slice(regularTxs.length));
+    
+    // Update validator stats
+    $validators.set(validators.map(v => 
+      v.id === miner.id ? { ...v, blocks: v.blocks + 1, lastHashRate: hashRate } : v
+    ));
 
-  $mining.set(false);
-  $currentBlock.set(null);
+  } catch (error) {
+    console.error('Mining failed:', error);
+  } finally {
+    $mining.set(false);
+    $currentBlock.set(null);
+    $miningProgress.set(0);
+    $miningAttempts.set(0);
+  }
 };
 
 export const resetNetwork = (): void => {
@@ -458,7 +523,7 @@ export const $avgBlockTime = computed($blockchain, (blockchain) => {
 });
 
 export const $networkHashrate = computed($validators, (validators) =>
-  validators.filter(v => v.status === 'active').length * 1000000
+  validators.filter(v => v.status === 'active').reduce((acc, v) => acc + v.hashRate, 0)
 );
 
 export const $avgTxFee = computed($blockchain, (blockchain) => {

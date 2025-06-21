@@ -35,12 +35,34 @@ const ExplorerPanel = () => {
                 <div className="font-bold text-green-400">{block.transactions.length}</div>
               </div>
               <div>
-                <div className="text-xs text-gray-400">Reward</div>
-                <div className="text-xs text-yellow-400">{block.reward?.toFixed(2) || '6.25'} BTC</div>
+                <div className="text-xs text-gray-400">Difficulty</div>
+                <div className="text-xs text-red-400">{typeof block.difficulty === 'number' ? block.difficulty.toFixed(1) : block.difficulty}</div>
               </div>
               <div>
                 <div className="text-xs text-gray-400">Nonce</div>
-                <div className="text-xs">{block.nonce}</div>
+                <div className="text-xs">{block.nonce?.toLocaleString()}</div>
+              </div>
+            </div>
+            
+            {/* PoW Details Row */}
+            <div className="grid grid-cols-4 gap-3 mb-3 text-sm">
+              <div>
+                <div className="text-xs text-gray-400">Reward</div>
+                <div className="text-xs text-yellow-400">{block.reward?.toFixed(4) || '6.25'} BTC</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Attempts</div>
+                <div className="text-xs">{block.attempts?.toLocaleString() || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Mining Time</div>
+                <div className="text-xs">{block.miningTime ? `${(block.miningTime / 1000).toFixed(1)}s` : 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Hash Rate</div>
+                <div className="text-xs text-purple-400">
+                  {block.hashRate ? `${(block.hashRate / 1e6).toFixed(1)} MH/s` : 'N/A'}
+                </div>
               </div>
             </div>
             
